@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghost Castle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0d0d; overflow: hidden; height: 100vh; width: 100vw; }
+  svg { display: block; width: 100vw; height: 100vh; }
+
+  /* Ghost — position controlled via JS, opacity transitions only */
+  .ghost-anim {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .ghost-bob { animation: ghost-float 3s ease-in-out infinite; }
+  @keyframes ghost-float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-12px); }
+  }
+  .ghost-tail {
+    animation: tail-sway 2.5s ease-in-out infinite;
+    transform-origin: 0px 30px;
+  }
+  @keyframes tail-sway {
+    0%, 100% { transform: skewX(0deg); }
+    25%      { transform: skewX(5deg); }
+    75%      { transform: skewX(-5deg); }
+  }
+  .ghost-glow { animation: glow-pulse 3s ease-in-out infinite; }
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.08; }
+    50%      { opacity: 0.18; }
+  }
+
+  /* Parallax mountains — extremely subtle */
+  .mountains-far  { animation: parallax-far  600s linear infinite; }
+  .mountains-near { animation: parallax-near 400s linear infinite; }
+  @keyframes parallax-far  { 0% { transform: translateX(0); } 100% { transform: translateX(-1920px); } }
+  @keyframes parallax-near { 0% { transform: translateX(0); } 100% { transform: translateX(-1920px); } }
+
+  /* Fog */
+  .fog { opacity: 0; }
+  .fog-1 { animation: fog-drift 22s linear infinite; }
+  .fog-2 { animation: fog-drift 28s linear 8s infinite; }
+  .fog-3 { animation: fog-drift 20s linear 14s infinite; }
+  @keyframes fog-drift {
+    0%   { transform: translateX(-500px); opacity: 0; }
+    10%  { opacity: 0.06; }
+    50%  { opacity: 0.1; }
+    90%  { opacity: 0.04; }
+    100% { transform: translateX(2200px); opacity: 0; }
+  }
+
+  /* Stars */
+  .star { animation: twinkle 4s ease-in-out infinite; }
+  .star:nth-child(2)  { animation-delay: 0.5s; }
+  .star:nth-child(3)  { animation-delay: 1.2s; }
+  .star:nth-child(4)  { animation-delay: 2.1s; }
+  .star:nth-child(5)  { animation-delay: 0.8s; }
+  .star:nth-child(6)  { animation-delay: 3.0s; }
+  .star:nth-child(7)  { animation-delay: 1.7s; }
+  .star:nth-child(8)  { animation-delay: 2.5s; }
+  .star:nth-child(9)  { animation-delay: 1.0s; }
+  .star:nth-child(10) { animation-delay: 3.5s; }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50%      { opacity: 0.8; }
+  }
+
+  /* Lightning bolts */
+  .lightning-bolt { opacity: 0; }
+  .lightning-1 { animation: lflash-1 8s  linear infinite; }
+  .lightning-2 { animation: lflash-2 11s linear infinite; }
+  .lightning-3 { animation: lflash-3 14s linear infinite; }
+  @keyframes lflash-1 {
+    0%, 34%, 36%, 38.5%, 41%, 100% { opacity: 0; }
+    34.5% { opacity: 0.95; }
+    35%   { opacity: 0; }
+    37%   { opacity: 0.75; }
+    39%   { opacity: 0.5; }
+  }
+  @keyframes lflash-2 {
+    0%, 60%, 62%, 65%, 100% { opacity: 0; }
+    60.5% { opacity: 0.85; }
+    61%   { opacity: 0; }
+    62.5% { opacity: 0.65; }
+  }
+  @keyframes lflash-3 {
+    0%, 20%, 22%, 24.5%, 100% { opacity: 0; }
+    20.5% { opacity: 0.8; }
+    21%   { opacity: 0; }
+    22.5% { opacity: 0.55; }
+    23%   { opacity: 0; }
+    23.5% { opacity: 0.4; }
+  }
+
+  /* Sky flash */
+  .sky-flash-1 { animation: skylight-1 8s  linear infinite; }
+  .sky-flash-2 { animation: skylight-2 11s linear infinite; }
+  .sky-flash-3 { animation: skylight-3 14s linear infinite; }
+  @keyframes skylight-1 {
+    0%, 34%, 41%, 100% { opacity: 0; }
+    34.5% { opacity: 0.18; } 35% { opacity: 0; }
+    37%   { opacity: 0.12; }
+  }
+  @keyframes skylight-2 {
+    0%, 60%, 65%, 100% { opacity: 0; }
+    60.5% { opacity: 0.16; }
+    62.5% { opacity: 0.09; }
+  }
+  @keyframes skylight-3 {
+    0%, 20%, 24.5%, 100% { opacity: 0; }
+    20.5% { opacity: 0.14; }
+    22.5% { opacity: 0.09; }
+  }
+
+  /* Castle illumination flash — much brighter */
+  .castle-flash-1 { animation: castlelight-1 8s  linear infinite; }
+  .castle-flash-2 { animation: castlelight-2 11s linear infinite; }
+  .castle-flash-3 { animation: castlelight-3 14s linear infinite; }
+  @keyframes castlelight-1 {
+    0%, 34%, 41%, 100% { opacity: 0; }
+    34.5% { opacity: 0.85; } 35% { opacity: 0.1; }
+    37%   { opacity: 0.6; }
+    39%   { opacity: 0.32; }
+  }
+  @keyframes castlelight-2 {
+    0%, 60%, 65%, 100% { opacity: 0; }
+    60.5% { opacity: 0.78; } 61% { opacity: 0.08; }
+    62.5% { opacity: 0.52; }
+  }
+  @keyframes castlelight-3 {
+    0%, 20%, 24.5%, 100% { opacity: 0; }
+    20.5% { opacity: 0.72; } 21% { opacity: 0.06; }
+    22.5% { opacity: 0.46; }
+    23.5% { opacity: 0.22; }
+  }
+
+  /* Clouds — parallax by altitude: lower clouds move faster and farther */
+  /* cloud-1 y~128 (highest/farthest) */
+  .cloud-1 { animation: cdrift-1 58s linear infinite; }
+  /* cloud-2 y~163 */
+  .cloud-2 { animation: cdrift-2 44s linear 6s infinite; }
+  /* cloud-3 y~198 */
+  .cloud-3 { animation: cdrift-3 30s linear infinite; }
+  /* cloud-4 y~315 (low/near) */
+  .cloud-4 { animation: cdrift-4 16s linear 4s infinite; }
+  /* cloud-5 y~272 */
+  .cloud-5 { animation: cdrift-5 22s linear 11s infinite; }
+  /* cloud-6 y~220 */
+  .cloud-6 { animation: cdrift-6 34s linear 20s infinite; }
+  /* cloud-7 y~294 */
+  .cloud-7 { animation: cdrift-7 19s linear 2s  infinite; }
+  /* cloud-8 y~344 (lowest/nearest/fastest) */
+  .cloud-8 { animation: cdrift-8 12s linear 8s  infinite; }
+  /* cloud-9 y~175 */
+  .cloud-9 { animation: cdrift-9 72s linear 30s infinite; }
+  /* All clouds move right-to-left (storm wind), nearer = larger translateX */
+  @keyframes cdrift-1 { 0% { transform: translateX(0); } 100% { transform: translateX(-260px); } }
+  @keyframes cdrift-2 { 0% { transform: translateX(0); } 100% { transform: translateX(-310px); } }
+  @keyframes cdrift-3 { 0% { transform: translateX(0); } 100% { transform: translateX(-340px); } }
+  @keyframes cdrift-4 { 0% { transform: translateX(0); } 100% { transform: translateX(-520px); } }
+  @keyframes cdrift-5 { 0% { transform: translateX(0); } 100% { transform: translateX(-410px); } }
+  @keyframes cdrift-6 { 0% { transform: translateX(0); } 100% { transform: translateX(-310px); } }
+  @keyframes cdrift-7 { 0% { transform: translateX(0); } 100% { transform: translateX(-440px); } }
+  @keyframes cdrift-8 { 0% { transform: translateX(0); } 100% { transform: translateX(-820px); } }
+  @keyframes cdrift-9 { 0% { transform: translateX(0); } 100% { transform: translateX(-195px); } }
+
+  /* Tree wind sway — strong gusting wind */
+  .tree { animation: tree-sway 1.8s ease-in-out infinite; }
+  @keyframes tree-sway {
+    0%, 100% { transform: rotate(0deg); }
+    20%  { transform: rotate(7deg); }
+    55%  { transform: rotate(-6deg); }
+    80%  { transform: rotate(5deg); }
+  }
+  /* Per-tree: pivot at base, varied timing */
+  .tree-1  { transform-origin:  300px 850px; animation-duration: 1.9s; animation-delay: 0.0s; }
+  .tree-2  { transform-origin:  390px 850px; animation-duration: 1.7s; animation-delay: 0.2s; }
+  .tree-3  { transform-origin:  470px 850px; animation-duration: 2.0s; animation-delay: 0.5s; }
+  .tree-4  { transform-origin:  545px 850px; animation-duration: 1.6s; animation-delay: 0.1s; }
+  .tree-5  { transform-origin:  618px 850px; animation-duration: 1.8s; animation-delay: 0.4s; }
+  .tree-6  { transform-origin: 1327px 850px; animation-duration: 1.9s; animation-delay: 0.3s; }
+  .tree-7  { transform-origin: 1405px 850px; animation-duration: 1.7s; animation-delay: 0.6s; }
+  .tree-8  { transform-origin: 1478px 850px; animation-duration: 2.1s; animation-delay: 0.1s; }
+  .tree-9  { transform-origin: 1558px 850px; animation-duration: 1.6s; animation-delay: 0.5s; }
+  .tree-10 { transform-origin: 1640px 850px; animation-duration: 1.9s; animation-delay: 0.2s; }
+  .tree-11 { transform-origin:  180px 850px; animation-duration: 2.2s; animation-delay: 0.3s; }
+  .tree-12 { transform-origin:  240px 850px; animation-duration: 1.8s; animation-delay: 0.7s; }
+  .tree-13 { transform-origin:  680px 850px; animation-duration: 1.5s; animation-delay: 0.6s; }
+  .tree-14 { transform-origin:  105px 850px; animation-duration: 2.4s; animation-delay: 0.1s; }
+  .tree-15 { transform-origin: 1760px 850px; animation-duration: 2.1s; animation-delay: 0.4s; }
+  .tree-16 { transform-origin: 1840px 850px; animation-duration: 2.5s; animation-delay: 0.0s; }
+  .tree-17 { transform-origin: 1250px 850px; animation-duration: 1.6s; animation-delay: 0.8s; }
+  .tree-18 { transform-origin: 1700px 850px; animation-duration: 2.0s; animation-delay: 0.2s; }
+
+  /* Bats — wing flap */
+  .bat-wl {
+    transform-box: fill-box; transform-origin: 100% 40%;
+    animation: bat-flap-l 0.22s ease-in-out infinite;
+  }
+  .bat-wr {
+    transform-box: fill-box; transform-origin: 0% 40%;
+    animation: bat-flap-r 0.22s ease-in-out infinite;
+  }
+  @keyframes bat-flap-l { 0%,100% { transform: rotate(-22deg); } 50% { transform: rotate(14deg); } }
+  @keyframes bat-flap-r { 0%,100% { transform: rotate(22deg); }  50% { transform: rotate(-14deg); } }
+
+  /* Bat flight — appears occasionally, invisible most of the time */
+  .bat-1 { animation: bat1-fly 55s linear       0s  infinite; }
+  .bat-2 { animation: bat2-fly 68s linear       8s  infinite; }
+  .bat-3 { animation: bat3-fly 42s linear       20s infinite; }
+  @keyframes bat1-fly {
+    0%    { transform: translate(-80px,310px);          opacity: 0; }
+    2%    { transform: translate(-55px,307px);          opacity: 0.7; }
+    20%   { transform: translate(2020px,284px);         opacity: 0.65; }
+    22%   { transform: translate(2100px,287px);         opacity: 0; }
+    22.1% { transform: translate(-80px,310px);          opacity: 0; }
+    100%  { transform: translate(-80px,310px);          opacity: 0; }
+  }
+  @keyframes bat2-fly {
+    0%    { transform: translate(2000px,258px) scaleX(-1); opacity: 0; }
+    1.5%  { transform: translate(1978px,255px) scaleX(-1); opacity: 0.6; }
+    17%   { transform: translate(-60px,239px)  scaleX(-1); opacity: 0.55; }
+    19%   { transform: translate(-120px,241px) scaleX(-1); opacity: 0; }
+    19.1% { transform: translate(2000px,258px) scaleX(-1); opacity: 0; }
+    100%  { transform: translate(2000px,258px) scaleX(-1); opacity: 0; }
+  }
+  @keyframes bat3-fly {
+    0%    { transform: translate(-80px,338px);          opacity: 0; }
+    3%    { transform: translate(-50px,335px);          opacity: 0.55; }
+    24%   { transform: translate(2020px,317px);         opacity: 0.5; }
+    26%   { transform: translate(2100px,319px);         opacity: 0; }
+    26.1% { transform: translate(-80px,338px);          opacity: 0; }
+    100%  { transform: translate(-80px,338px);          opacity: 0; }
+  }
+
+  /* Storm leaves */
+  .leaf { opacity: 0; }
+  .leaf-1  { animation: leaf-fly-a 9s  linear       0s  infinite; }
+  .leaf-2  { animation: leaf-fly-b 7s  ease-in      3s  infinite; }
+  .leaf-3  { animation: leaf-fly-c 11s linear       7s  infinite; }
+  .leaf-4  { animation: leaf-fly-a 8s  ease-in-out  1s  infinite; }
+  .leaf-5  { animation: leaf-fly-d 6s  linear       5s  infinite; }
+  .leaf-6  { animation: leaf-fly-b 10s linear       9s  infinite; }
+  .leaf-7  { animation: leaf-fly-e 8s  ease-in-out  2s  infinite; }
+  .leaf-8  { animation: leaf-fly-c 7s  linear       11s infinite; }
+  .leaf-9  { animation: leaf-fly-d 9s  ease-in      4s  infinite; }
+  .leaf-10 { animation: leaf-fly-e 6s  linear       8s  infinite; }
+  @keyframes leaf-fly-a {
+    0%   { transform: translate(1980px,648px) rotate(0deg)    scale(1);   opacity: 0; }
+    6%   { opacity: 0.65; }
+    88%  { opacity: 0.45; }
+    100% { transform: translate(-80px,718px)  rotate(-700deg) scale(1);   opacity: 0; }
+  }
+  @keyframes leaf-fly-b {
+    0%   { transform: translate(1980px,430px) rotate(40deg)   scale(0.7); opacity: 0; }
+    6%   { opacity: 0.6; }
+    88%  { opacity: 0.4; }
+    100% { transform: translate(-80px,498px)  rotate(360deg)  scale(0.7); opacity: 0; }
+  }
+  @keyframes leaf-fly-c {
+    0%   { transform: translate(1980px,555px) rotate(-30deg)  scale(1.2); opacity: 0; }
+    6%   { opacity: 0.65; }
+    50%  { transform: translate(920px,510px)  rotate(180deg)  scale(1.2); }
+    88%  { opacity: 0.45; }
+    100% { transform: translate(-80px,568px)  rotate(480deg)  scale(1.2); opacity: 0; }
+  }
+  @keyframes leaf-fly-d {
+    0%   { transform: translate(1980px,720px) rotate(15deg)   scale(0.9); opacity: 0; }
+    6%   { opacity: 0.7; }
+    88%  { opacity: 0.5; }
+    100% { transform: translate(-80px,798px)  rotate(-540deg) scale(0.9); opacity: 0; }
+  }
+  @keyframes leaf-fly-e {
+    0%   { transform: translate(1980px,340px) rotate(-60deg)  scale(0.65); opacity: 0; }
+    6%   { opacity: 0.55; }
+    45%  { transform: translate(1100px,370px) rotate(-200deg) scale(0.65); }
+    88%  { opacity: 0.35; }
+    100% { transform: translate(-80px,438px)  rotate(-680deg) scale(0.65); opacity: 0; }
+  }
+
+  /* Sound button */
+  #sound-btn {
+    position: fixed; bottom: 18px; right: 18px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.45);
+    font-family: sans-serif; font-size: 11px;
+    padding: 6px 10px; border-radius: 4px;
+    cursor: pointer; user-select: none; letter-spacing: 0.05em;
+  }
+  #sound-btn:hover { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+<button id="sound-btn">click for sound</button>
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#080808"/>
+      <stop offset="50%"  stop-color="#111"/>
+      <stop offset="100%" stop-color="#1a1a1a"/>
+    </linearGradient>
+    <radialGradient id="ghostGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Leaf silhouette for storm leaves -->
+    <path id="leaf-shape" d="M0,-8 C3,-11 9,-8 8,-3 C11,1 7,8 3,9 C0,11 -3,9 -5,7 C-9,3 -9,-4 -5,-6 C-8,-10 -3,-11 0,-8 Z" fill="#151515"/>
+    <!-- Castle flash radiates from castle base upward — wide coverage, bright center -->
+    <radialGradient id="castleFlashGrad" cx="50%" cy="92%" r="70%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#cccccc" stop-opacity="1.0"/>
+      <stop offset="30%"  stop-color="#888888" stop-opacity="0.7"/>
+      <stop offset="65%"  stop-color="#444444" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+
+  <!-- Stars -->
+  <g class="stars">
+    <circle class="star" cx="150"  cy="80"  r="1.5" fill="#888"/>
+    <circle class="star" cx="400"  cy="150" r="1"   fill="#777"/>
+    <circle class="star" cx="650"  cy="60"  r="1.5" fill="#999"/>
+    <circle class="star" cx="900"  cy="120" r="1"   fill="#666"/>
+    <circle class="star" cx="1200" cy="90"  r="1.5" fill="#888"/>
+    <circle class="star" cx="1450" cy="170" r="1"   fill="#777"/>
+    <circle class="star" cx="1700" cy="50"  r="1.5" fill="#999"/>
+    <circle class="star" cx="1100" cy="200" r="1"   fill="#666"/>
+    <circle class="star" cx="300"  cy="250" r="1"   fill="#777"/>
+    <circle class="star" cx="1800" cy="180" r="1.5" fill="#888"/>
+  </g>
+
+  <!-- Moon -->
+  <circle cx="1550" cy="140" r="140" fill="url(#moonGlow)"/>
+  <circle cx="1550" cy="140" r="35"  fill="#c0c0c0" opacity="0.7"/>
+  <circle cx="1558" cy="135" r="35"  fill="#080808" opacity="0.12"/>
+
+  <!-- Sky flash overlays (full-screen, slightly brighter now) -->
+  <rect class="sky-flash-1" width="1920" height="1080" fill="white" opacity="0"/>
+  <rect class="sky-flash-2" width="1920" height="1080" fill="white" opacity="0"/>
+  <rect class="sky-flash-3" width="1920" height="1080" fill="white" opacity="0"/>
+
+  <!-- Lightning bolts -->
+  <g class="lightning-bolt lightning-1">
+    <polyline points="350,0 340,80 362,92 328,188 356,196 308,328 336,336 288,458"
+              fill="none" stroke="#bbb" stroke-width="3.5" stroke-linejoin="round"/>
+    <polyline points="350,0 340,80 362,92 328,188 356,196 308,328 336,336 288,458"
+              fill="none" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+  </g>
+  <g class="lightning-bolt lightning-2">
+    <polyline points="1210,0 1218,72 1188,88 1218,174 1192,188 1228,294 1202,314 1244,428"
+              fill="none" stroke="#bbb" stroke-width="3" stroke-linejoin="round"/>
+    <polyline points="1210,0 1218,72 1188,88 1218,174 1192,188 1228,294 1202,314 1244,428"
+              fill="none" stroke="white" stroke-width="1.2" stroke-linejoin="round"/>
+  </g>
+  <g class="lightning-bolt lightning-3">
+    <polyline points="755,0 764,62 742,78 774,154 748,168 782,264 758,284 794,385"
+              fill="none" stroke="#bbb" stroke-width="2.5" stroke-linejoin="round"/>
+    <polyline points="755,0 764,62 742,78 774,154 748,168 782,264 758,284 794,385"
+              fill="none" stroke="white" stroke-width="1" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Bats — fly overhead occasionally -->
+  <g class="bat bat-1" fill="#0d0d0d">
+    <path class="bat-wl" d="M-3,0 C-8,-9 -22,-14 -28,-6 C-24,1 -14,6 -3,2 Z"/>
+    <path class="bat-wr" d="M3,0 C8,-9 22,-14 28,-6 C24,1 14,6 3,2 Z"/>
+    <ellipse cx="0" cy="-1" rx="4" ry="5"/>
+    <ellipse cx="0" cy="-7" rx="3" ry="2.5"/>
+    <path d="M-3,-9 L-6,-14 L-1,-10 Z"/>
+    <path d="M3,-9 L6,-14 L1,-10 Z"/>
+  </g>
+  <g class="bat bat-2" fill="#0d0d0d">
+    <path class="bat-wl" d="M-3,0 C-8,-9 -22,-14 -28,-6 C-24,1 -14,6 -3,2 Z"/>
+    <path class="bat-wr" d="M3,0 C8,-9 22,-14 28,-6 C24,1 14,6 3,2 Z"/>
+    <ellipse cx="0" cy="-1" rx="4" ry="5"/>
+    <ellipse cx="0" cy="-7" rx="3" ry="2.5"/>
+    <path d="M-3,-9 L-6,-14 L-1,-10 Z"/>
+    <path d="M3,-9 L6,-14 L1,-10 Z"/>
+  </g>
+  <g class="bat bat-3" fill="#0d0d0d">
+    <path class="bat-wl" d="M-3,0 C-8,-9 -20,-12 -26,-5 C-22,2 -12,5 -3,2 Z"/>
+    <path class="bat-wr" d="M3,0 C8,-9 20,-12 26,-5 C22,2 12,5 3,2 Z"/>
+    <ellipse cx="0" cy="-1" rx="3.5" ry="4.5"/>
+    <ellipse cx="0" cy="-6.5" rx="2.5" ry="2"/>
+    <path d="M-2.5,-7.5 L-5,-12 L-1,-8.5 Z"/>
+    <path d="M2.5,-7.5 L5,-12 L1,-8.5 Z"/>
+  </g>
+
+  <!-- Clouds — original 4 groups -->
+  <g class="cloud-1" opacity="0.75">
+    <ellipse cx="1478" cy="128" rx="72"  ry="21" fill="#151515"/>
+    <ellipse cx="1518" cy="118" rx="56"  ry="19" fill="#131313"/>
+    <ellipse cx="1550" cy="133" rx="82"  ry="23" fill="#141414"/>
+    <ellipse cx="1592" cy="123" rx="52"  ry="17" fill="#131313"/>
+  </g>
+  <g class="cloud-2" opacity="0.65">
+    <ellipse cx="1598" cy="163" rx="66"  ry="19" fill="#161616"/>
+    <ellipse cx="1648" cy="153" rx="51"  ry="16" fill="#141414"/>
+    <ellipse cx="1628" cy="168" rx="76"  ry="21" fill="#151515"/>
+  </g>
+  <g class="cloud-3" opacity="0.5">
+    <ellipse cx="398"  cy="198" rx="92"  ry="23" fill="#141414"/>
+    <ellipse cx="448"  cy="188" rx="62"  ry="19" fill="#131313"/>
+    <ellipse cx="480"  cy="203" rx="72"  ry="21" fill="#151515"/>
+  </g>
+  <g class="cloud-2" opacity="0.45">
+    <ellipse cx="798"  cy="98"  rx="82"  ry="21" fill="#141414"/>
+    <ellipse cx="848"  cy="88"  rx="56"  ry="17" fill="#131313"/>
+    <ellipse cx="828"  cy="103" rx="71"  ry="19" fill="#151515"/>
+  </g>
+
+  <!-- Clouds — additional groups -->
+  <g class="cloud-4" opacity="0.6">
+    <ellipse cx="220"  cy="320" rx="110" ry="28" fill="#141414"/>
+    <ellipse cx="275"  cy="308" rx="78"  ry="22" fill="#131313"/>
+    <ellipse cx="310"  cy="325" rx="90"  ry="26" fill="#151515"/>
+    <ellipse cx="355"  cy="315" rx="62"  ry="20" fill="#131313"/>
+  </g>
+  <g class="cloud-5" opacity="0.55">
+    <ellipse cx="630"  cy="275" rx="96"  ry="24" fill="#141414"/>
+    <ellipse cx="678"  cy="264" rx="68"  ry="20" fill="#131313"/>
+    <ellipse cx="714"  cy="279" rx="80"  ry="22" fill="#151515"/>
+  </g>
+  <g class="cloud-6" opacity="0.5">
+    <ellipse cx="1120" cy="222" rx="88"  ry="22" fill="#141414"/>
+    <ellipse cx="1165" cy="212" rx="62"  ry="18" fill="#131313"/>
+    <ellipse cx="1195" cy="228" rx="76"  ry="20" fill="#151515"/>
+    <ellipse cx="1238" cy="218" rx="52"  ry="16" fill="#131313"/>
+  </g>
+  <g class="cloud-7" opacity="0.65">
+    <ellipse cx="1720" cy="298" rx="102" ry="26" fill="#151515"/>
+    <ellipse cx="1768" cy="286" rx="74"  ry="22" fill="#131313"/>
+    <ellipse cx="1800" cy="302" rx="86"  ry="24" fill="#141414"/>
+    <ellipse cx="1845" cy="293" rx="58"  ry="18" fill="#131313"/>
+  </g>
+  <g class="cloud-8" opacity="0.7">
+    <ellipse cx="1010" cy="348" rx="118" ry="29" fill="#141414"/>
+    <ellipse cx="1062" cy="336" rx="84"  ry="24" fill="#131313"/>
+    <ellipse cx="1100" cy="352" rx="98"  ry="27" fill="#151515"/>
+    <ellipse cx="1148" cy="341" rx="66"  ry="21" fill="#131313"/>
+  </g>
+  <g class="cloud-9" opacity="0.4">
+    <ellipse cx="62"   cy="178" rx="72"  ry="18" fill="#141414"/>
+    <ellipse cx="105"  cy="168" rx="50"  ry="15" fill="#131313"/>
+    <ellipse cx="136"  cy="181" rx="62"  ry="17" fill="#151515"/>
+  </g>
+
+  <!-- Far mountains -->
+  <g class="mountains-far">
+    <polygon points="-100,850 50,580 150,680 280,520 380,640 500,470 600,590 720,440 850,560 980,480 1100,570 1220,450 1350,550 1480,490 1600,560 1750,480 1920,530 2020,850" fill="#181818"/>
+    <polygon points="1920,850 1970,580 2070,680 2200,520 2300,640 2420,470 2520,590 2640,440 2770,560 2900,480 3020,570 3140,450 3270,550 3400,490 3520,560 3670,480 3840,530 3940,850" fill="#181818"/>
+  </g>
+
+  <!-- Near mountains -->
+  <g class="mountains-near">
+    <polygon points="-100,850 30,660 150,730 300,600 420,690 560,560 700,670 830,580 960,660 1100,590 1240,670 1380,610 1520,680 1660,570 1800,650 1920,620 2020,850" fill="#1e1e1e"/>
+    <polygon points="1920,850 1950,660 2070,730 2220,600 2340,690 2480,560 2620,670 2750,580 2880,660 3020,590 3160,670 3300,610 3440,680 3580,570 3720,650 3840,620 3940,850" fill="#1e1e1e"/>
+  </g>
+
+  <!-- Castle — 1.5x scale anchored at ground center (960, 850) -->
+  <g transform="translate(960,850) scale(1.5) translate(-960,-850)" fill="#0e0e0e">
+    <!-- Main wall -->
+    <rect x="720" y="660" width="480" height="190"/>
+
+    <!-- Left tower -->
+    <rect x="690" y="560" width="65" height="290"/>
+    <polygon points="690,560 722,490 755,560"/>
+    <line x1="722" y1="490" x2="722" y2="462" stroke="#0e0e0e" stroke-width="2"/>
+    <polygon points="722,462 746,470 722,478" fill="#2a2a2a"/>
+
+    <!-- Right tower -->
+    <rect x="1170" y="540" width="65" height="310"/>
+    <polygon points="1170,540 1202,460 1235,540"/>
+
+    <!-- Center tower (tallest) -->
+    <rect x="920" y="510" width="80" height="340"/>
+    <polygon points="920,510 960,418 1000,510"/>
+    <line x1="960" y1="418" x2="960" y2="388" stroke="#0e0e0e" stroke-width="2"/>
+    <polygon points="960,388 986,396 960,405" fill="#2a2a2a"/>
+
+    <!-- Battlements left -->
+    <rect x="755" y="648" width="18" height="18"/><rect x="786" y="648" width="18" height="18"/>
+    <rect x="817" y="648" width="18" height="18"/><rect x="848" y="648" width="18" height="18"/>
+    <rect x="879" y="648" width="18" height="18"/>
+    <!-- Battlements right -->
+    <rect x="1001" y="648" width="18" height="18"/><rect x="1032" y="648" width="18" height="18"/>
+    <rect x="1063" y="648" width="18" height="18"/><rect x="1094" y="648" width="18" height="18"/>
+    <rect x="1125" y="648" width="18" height="18"/><rect x="1155" y="648" width="18" height="18"/>
+
+    <!-- Gate arch -->
+    <ellipse cx="960" cy="850" rx="36" ry="52" fill="#060606"/>
+    <line x1="960" y1="798" x2="960" y2="850" stroke="#111" stroke-width="2"/>
+    <line x1="938" y1="810" x2="982" y2="810" stroke="#111" stroke-width="1.5"/>
+    <line x1="932" y1="832" x2="988" y2="832" stroke="#111" stroke-width="1.5"/>
+
+    <!-- Wall windows -->
+    <ellipse cx="790"  cy="730" rx="9" ry="16" fill="#1a1a1a"/>
+    <ellipse cx="862"  cy="730" rx="9" ry="16" fill="#1a1a1a"/>
+    <ellipse cx="1058" cy="730" rx="9" ry="16" fill="#1a1a1a"/>
+    <ellipse cx="1130" cy="730" rx="9" ry="16" fill="#1a1a1a"/>
+
+    <!-- Tower windows -->
+    <ellipse cx="722"  cy="600" rx="7" ry="12" fill="#151515"/>
+    <ellipse cx="722"  cy="652" rx="7" ry="12" fill="#151515"/>
+    <ellipse cx="1202" cy="580" rx="7" ry="12" fill="#151515"/>
+    <ellipse cx="1202" cy="632" rx="7" ry="12" fill="#151515"/>
+    <ellipse cx="960"  cy="556" rx="7" ry="12" fill="#151515"/>
+    <ellipse cx="960"  cy="612" rx="7" ry="12" fill="#151515"/>
+
+    <!-- Faint window glow -->
+    <ellipse cx="790"  cy="730" rx="9" ry="16" fill="#444" opacity="0.22"/>
+    <ellipse cx="1130" cy="730" rx="9" ry="16" fill="#444" opacity="0.18"/>
+    <ellipse cx="1202" cy="580" rx="7" ry="12" fill="#444" opacity="0.14"/>
+  </g>
+
+  <!-- Castle lightning illumination — wider, brighter -->
+  <rect class="castle-flash-1" x="240" y="100" width="1440" height="750" fill="url(#castleFlashGrad)" opacity="0"/>
+  <rect class="castle-flash-2" x="240" y="100" width="1440" height="750" fill="url(#castleFlashGrad)" opacity="0"/>
+  <rect class="castle-flash-3" x="240" y="100" width="1440" height="750" fill="url(#castleFlashGrad)" opacity="0"/>
+
+  <!-- Ground -->
+  <rect x="0" y="850" width="1920" height="230" fill="#0c0c0c"/>
+  <ellipse cx="960" cy="850" rx="1100" ry="25" fill="#111"/>
+
+  <!-- Trees — left of castle (original 5) -->
+  <g class="tree tree-1">
+    <rect x="296" y="828" width="8" height="22" fill="#090909"/>
+    <polygon points="300,645 252,835 348,835" fill="#0d0d0d"/>
+    <polygon points="300,688 257,820 343,820" fill="#0c0c0c"/>
+    <polygon points="300,728 262,808 338,808" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-2">
+    <rect x="386" y="831" width="8" height="19" fill="#090909"/>
+    <polygon points="390,675 344,838 436,838" fill="#0d0d0d"/>
+    <polygon points="390,713 348,824 432,824" fill="#0c0c0c"/>
+    <polygon points="390,748 352,812 428,812" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-3">
+    <rect x="466" y="830" width="8" height="20" fill="#090909"/>
+    <polygon points="470,655 422,836 518,836" fill="#0d0d0d"/>
+    <polygon points="470,695 426,821 514,821" fill="#0c0c0c"/>
+    <polygon points="470,732 430,809 510,809" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-4">
+    <rect x="541" y="834" width="8" height="16" fill="#090909"/>
+    <polygon points="545,692 502,840 588,840" fill="#0d0d0d"/>
+    <polygon points="545,724 505,826 585,826" fill="#0c0c0c"/>
+    <polygon points="545,754 509,814 581,814" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-5">
+    <rect x="614" y="831" width="8" height="19" fill="#090909"/>
+    <polygon points="618,672 573,837 663,837" fill="#0d0d0d"/>
+    <polygon points="618,709 577,823 659,823" fill="#0c0c0c"/>
+    <polygon points="618,744 581,811 655,811" fill="#0b0b0b"/>
+  </g>
+
+  <!-- Trees — right of castle (original 5) -->
+  <g class="tree tree-6">
+    <rect x="1323" y="831" width="8" height="19" fill="#090909"/>
+    <polygon points="1327,662 1280,837 1374,837" fill="#0d0d0d"/>
+    <polygon points="1327,700 1284,822 1370,822" fill="#0c0c0c"/>
+    <polygon points="1327,736 1288,810 1366,810" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-7">
+    <rect x="1401" y="828" width="8" height="22" fill="#090909"/>
+    <polygon points="1405,645 1358,835 1452,835" fill="#0d0d0d"/>
+    <polygon points="1405,688 1362,820 1448,820" fill="#0c0c0c"/>
+    <polygon points="1405,728 1366,808 1444,808" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-8">
+    <rect x="1474" y="833" width="8" height="17" fill="#090909"/>
+    <polygon points="1478,685 1434,839 1522,839" fill="#0d0d0d"/>
+    <polygon points="1478,718 1437,825 1519,825" fill="#0c0c0c"/>
+    <polygon points="1478,748 1441,813 1515,813" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-9">
+    <rect x="1554" y="830" width="8" height="20" fill="#090909"/>
+    <polygon points="1558,658 1510,836 1606,836" fill="#0d0d0d"/>
+    <polygon points="1558,697 1514,821 1602,821" fill="#0c0c0c"/>
+    <polygon points="1558,733 1518,809 1598,809" fill="#0b0b0b"/>
+  </g>
+  <g class="tree tree-10">
+    <rect x="1636" y="831" width="8" height="19" fill="#090909"/>
+    <polygon points="1640,672 1595,837 1685,837" fill="#0d0d0d"/>
+    <polygon points="1640,709 1599,823 1681,823" fill="#0c0c0c"/>
+    <polygon points="1640,744 1603,811 1677,811" fill="#0b0b0b"/>
+  </g>
+
+  <!-- New trees — left, varied heights -->
+  <!-- tree-11: x=180, h=320 -->
+  <g class="tree tree-11">
+    <rect x="176" y="816" width="8" height="34" fill="#090909"/>
+    <polygon points="180,530 105,835 255,835" fill="#0d0d0d"/>
+    <polygon points="180,597 113,820 247,820" fill="#0c0c0c"/>
+    <polygon points="180,660 121,808 239,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-12: x=240, h=245 -->
+  <g class="tree tree-12">
+    <rect x="236" y="824" width="8" height="26" fill="#090909"/>
+    <polygon points="240,605 183,835 297,835" fill="#0d0d0d"/>
+    <polygon points="240,657 189,820 291,820" fill="#0c0c0c"/>
+    <polygon points="240,704 195,808 285,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-13: x=680, h=140 -->
+  <g class="tree tree-13">
+    <rect x="676" y="835" width="8" height="15" fill="#090909"/>
+    <polygon points="680,710 647,835 713,835" fill="#0d0d0d"/>
+    <polygon points="680,739 651,820 709,820" fill="#0c0c0c"/>
+    <polygon points="680,767 654,808 706,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-14: x=105, h=410 (tallest — 2x current max) -->
+  <g class="tree tree-14">
+    <rect x="101" y="806" width="8" height="44" fill="#090909"/>
+    <polygon points="105,440  9,835  201,835" fill="#0d0d0d"/>
+    <polygon points="105,526 19,820  191,820" fill="#0c0c0c"/>
+    <polygon points="105,606 29,808  181,808" fill="#0b0b0b"/>
+  </g>
+
+  <!-- New trees — right, varied heights -->
+  <!-- tree-15: x=1760, h=290 -->
+  <g class="tree tree-15">
+    <rect x="1756" y="819" width="8" height="31" fill="#090909"/>
+    <polygon points="1760,560 1692,835 1828,835" fill="#0d0d0d"/>
+    <polygon points="1760,621 1699,820 1821,820" fill="#0c0c0c"/>
+    <polygon points="1760,677 1706,808 1814,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-16: x=1840, h=410 (tallest — 2x current max) -->
+  <g class="tree tree-16">
+    <rect x="1836" y="806" width="8" height="44" fill="#090909"/>
+    <polygon points="1840,440 1744,835 1936,835" fill="#0d0d0d"/>
+    <polygon points="1840,526 1754,820 1926,820" fill="#0c0c0c"/>
+    <polygon points="1840,606 1764,808 1916,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-17: x=1250, h=145 -->
+  <g class="tree tree-17">
+    <rect x="1246" y="834" width="8" height="16" fill="#090909"/>
+    <polygon points="1250,705 1216,835 1284,835" fill="#0d0d0d"/>
+    <polygon points="1250,735 1220,820 1280,820" fill="#0c0c0c"/>
+    <polygon points="1250,764 1223,808 1277,808" fill="#0b0b0b"/>
+  </g>
+  <!-- tree-18: x=1700, h=360 -->
+  <g class="tree tree-18">
+    <rect x="1696" y="811" width="8" height="39" fill="#090909"/>
+    <polygon points="1700,490 1616,835 1784,835" fill="#0d0d0d"/>
+    <polygon points="1700,566 1624,820 1776,820" fill="#0c0c0c"/>
+    <polygon points="1700,636 1633,808 1767,808" fill="#0b0b0b"/>
+  </g>
+
+  <!-- Storm leaves blowing in the wind -->
+  <use class="leaf leaf-1"  href="#leaf-shape"/>
+  <use class="leaf leaf-2"  href="#leaf-shape"/>
+  <use class="leaf leaf-3"  href="#leaf-shape"/>
+  <use class="leaf leaf-4"  href="#leaf-shape"/>
+  <use class="leaf leaf-5"  href="#leaf-shape"/>
+  <use class="leaf leaf-6"  href="#leaf-shape"/>
+  <use class="leaf leaf-7"  href="#leaf-shape"/>
+  <use class="leaf leaf-8"  href="#leaf-shape"/>
+  <use class="leaf leaf-9"  href="#leaf-shape"/>
+  <use class="leaf leaf-10" href="#leaf-shape"/>
+
+  <!-- Fog wisps -->
+  <ellipse class="fog fog-1" cx="300"  cy="820" rx="280" ry="12" fill="white"/>
+  <ellipse class="fog fog-2" cx="900"  cy="840" rx="320" ry="10" fill="white"/>
+  <ellipse class="fog fog-3" cx="1500" cy="825" rx="220" ry="8"  fill="white"/>
+
+  <!-- Ghost — outer: roam+fade, inner: bob -->
+  <g id="ghost-outer" class="ghost-anim">
+    <g class="ghost-bob">
+      <ellipse class="ghost-glow" cx="0" cy="10" rx="80" ry="80" fill="url(#ghostGlow)"/>
+      <g fill="rgba(100,100,100,0.26)">
+        <ellipse cx="0" cy="-18" rx="25" ry="28"/>
+        <rect x="-25" y="-18" width="50" height="50" rx="2"/>
+        <g class="ghost-tail">
+          <path d="M-25,32 Q-18,50 -12,32 Q-6,50 0,32 Q6,50 12,32 Q18,50 25,32 L25,-1 L-25,-1 Z"
+                fill="rgba(100,100,100,0.26)"/>
+        </g>
+      </g>
+      <ellipse cx="-9"  cy="-14" rx="6" ry="7" fill="rgba(12,12,12,0.7)"/>
+      <ellipse cx="9"   cy="-14" rx="6" ry="7" fill="rgba(12,12,12,0.7)"/>
+      <circle  cx="-7"  cy="-16" r="2"          fill="rgba(140,140,140,0.15)"/>
+      <circle  cx="11"  cy="-16" r="2"          fill="rgba(140,140,140,0.15)"/>
+      <ellipse cx="0"   cy="4"   rx="5" ry="6"  fill="rgba(12,12,12,0.7)"/>
+    </g>
+  </g>
+
+</svg>
+
+<script>
+// ─── Ghost: flicker between trees and castle, visible < 2s at a time ─────────
+const ghostEl = document.getElementById('ghost-outer');
+
+// Spawn positions spread across the full scene:
+// left trees (x≈80–680), castle front (x≈720–1200), right trees (x≈1250–1900)
+const ghostPositions = [
+  // outer left (tall trees)
+  { x: 88,   y: 776 }, { x: 148,  y: 779 },
+  // inner left
+  { x: 210,  y: 781 }, { x: 295,  y: 782 }, { x: 375,  y: 780 },
+  { x: 455,  y: 783 }, { x: 540,  y: 781 }, { x: 625,  y: 782 },
+  // castle front
+  { x: 730,  y: 784 }, { x: 830,  y: 783 }, { x: 940,  y: 785 },
+  { x: 1050, y: 783 }, { x: 1150, y: 784 },
+  // inner right
+  { x: 1265, y: 782 }, { x: 1355, y: 780 }, { x: 1445, y: 783 },
+  { x: 1540, y: 781 }, { x: 1635, y: 782 },
+  // outer right (tall trees)
+  { x: 1720, y: 779 }, { x: 1810, y: 777 }, { x: 1880, y: 775 },
+];
+
+let lastPosIdx = -1;
+
+(function ghostLoop() {
+  // Pick a new position, avoiding the same spot twice in a row
+  let idx;
+  do { idx = Math.floor(Math.random() * ghostPositions.length); } while (idx === lastPosIdx);
+  lastPosIdx = idx;
+  const { x, y } = ghostPositions[idx];
+
+  // Teleport while invisible, then fade in
+  ghostEl.style.transform = `translate(${x}px, ${y}px) scale(0.5)`;
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    ghostEl.style.opacity = '1';
+
+    // Visible for 500–1900ms (always < 2s)
+    const visibleMs = 500 + Math.random() * 1400;
+    setTimeout(() => {
+      ghostEl.style.opacity = '0';
+
+      // Hidden for 3–10s before reappearing elsewhere
+      const hiddenMs = 3000 + Math.random() * 7000;
+      setTimeout(ghostLoop, hiddenMs);
+    }, visibleMs);
+  }));
+})();
+
+// ─── Audio ────────────────────────────────────────────────────────────────────
+let audioReady = false;
+let audioCtx;
+
+document.getElementById('sound-btn').addEventListener('click', function() {
+  if (audioReady) return;
+  audioReady = true;
+  this.textContent = 'sound on';
+
+  const AC = window.AudioContext || window.webkitAudioContext;
+  audioCtx = new AC();
+
+  function noiseBuffer(sec) {
+    const n = Math.ceil(audioCtx.sampleRate * sec);
+    const b = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+
+  // ── Wind — multi-layer filtered noise with irregular gusting ──────────────
+  const windNoise = audioCtx.createBufferSource();
+  windNoise.buffer = noiseBuffer(8);
+  windNoise.loop = true;
+
+  // Low drone (gives weight and presence)
+  const wLow = audioCtx.createBiquadFilter();
+  wLow.type = 'lowpass';
+  wLow.frequency.value = 90;
+  wLow.Q.value = 0.5;
+  const wLowGain = audioCtx.createGain();
+  wLowGain.gain.value = 0.18;
+
+  // Main howl resonance
+  const wMid1 = audioCtx.createBiquadFilter();
+  wMid1.type = 'bandpass';
+  wMid1.frequency.value = 220;
+  wMid1.Q.value = 2.2;
+  const wMid1Gain = audioCtx.createGain();
+  wMid1Gain.gain.value = 0.32;
+
+  // Upper howl
+  const wMid2 = audioCtx.createBiquadFilter();
+  wMid2.type = 'bandpass';
+  wMid2.frequency.value = 520;
+  wMid2.Q.value = 1.6;
+  const wMid2Gain = audioCtx.createGain();
+  wMid2Gain.gain.value = 0.22;
+
+  // Whistle overtone (very subtle)
+  const wHi = audioCtx.createBiquadFilter();
+  wHi.type = 'bandpass';
+  wHi.frequency.value = 1400;
+  wHi.Q.value = 3.5;
+  const wHiGain = audioCtx.createGain();
+  wHiGain.gain.value = 0.06;
+
+  // Mix all wind layers
+  const windMaster = audioCtx.createGain();
+  windMaster.gain.value = 0.55;
+
+  windNoise.connect(wLow);   wLow.connect(wLowGain);   wLowGain.connect(windMaster);
+  windNoise.connect(wMid1);  wMid1.connect(wMid1Gain); wMid1Gain.connect(windMaster);
+  windNoise.connect(wMid2);  wMid2.connect(wMid2Gain); wMid2Gain.connect(windMaster);
+  windNoise.connect(wHi);    wHi.connect(wHiGain);     wHiGain.connect(windMaster);
+  windMaster.connect(audioCtx.destination);
+
+  // Two slow LFOs at slightly different rates — creates organic, irregular gusting
+  const gustA = audioCtx.createOscillator();
+  gustA.frequency.value = 0.08;
+  const gustAGain = audioCtx.createGain();
+  gustAGain.gain.value = 0.14;
+  gustA.connect(gustAGain);
+  gustAGain.connect(windMaster.gain);
+
+  const gustB = audioCtx.createOscillator();
+  gustB.frequency.value = 0.19;
+  const gustBGain = audioCtx.createGain();
+  gustBGain.gain.value = 0.08;
+  gustB.connect(gustBGain);
+  gustBGain.connect(windMaster.gain);
+
+  // Slowly sweep the main howl frequency for extra organic quality
+  wMid1.frequency.setValueAtTime(220, audioCtx.currentTime);
+  wMid1.frequency.linearRampToValueAtTime(280, audioCtx.currentTime + 12);
+  wMid1.frequency.linearRampToValueAtTime(195, audioCtx.currentTime + 26);
+  wMid1.frequency.linearRampToValueAtTime(245, audioCtx.currentTime + 40);
+
+  windNoise.start();
+  gustA.start();
+  gustB.start();
+
+  // ── Leaf rustle — stochastic texture with natural amplitude variation ──────
+  const leafNoise = audioCtx.createBufferSource();
+  leafNoise.buffer = noiseBuffer(6);
+  leafNoise.loop = true;
+
+  // Bandpass centered in leaf-crinkle range
+  const leafBP = audioCtx.createBiquadFilter();
+  leafBP.type = 'bandpass';
+  leafBP.frequency.value = 3200;
+  leafBP.Q.value = 0.8;
+
+  // Crisp high shelf
+  const leafHP = audioCtx.createBiquadFilter();
+  leafHP.type = 'highpass';
+  leafHP.frequency.value = 4800;
+
+  const leafMaster = audioCtx.createGain();
+  leafMaster.gain.value = 0.045;
+
+  leafNoise.connect(leafBP);
+  leafBP.connect(leafHP);
+  leafHP.connect(leafMaster);
+  leafMaster.connect(audioCtx.destination);
+
+  // Use a second slow noise source through a lowpass as an irregular AM envelope
+  // This sounds far more natural than a fixed tremolo oscillator
+  const leafAMNoise = audioCtx.createBufferSource();
+  leafAMNoise.buffer = noiseBuffer(4);
+  leafAMNoise.loop = true;
+  const leafAMLP = audioCtx.createBiquadFilter();
+  leafAMLP.type = 'lowpass';
+  leafAMLP.frequency.value = 6;
+  const leafAMGain = audioCtx.createGain();
+  leafAMGain.gain.value = 0.03;
+  leafAMNoise.connect(leafAMLP);
+  leafAMLP.connect(leafAMGain);
+  leafAMGain.connect(leafMaster.gain);
+
+  // Couple leaf rustle intensity to wind gusting — share one of the gust LFOs
+  const leafGustGain = audioCtx.createGain();
+  leafGustGain.gain.value = 0.018;
+  gustA.connect(leafGustGain);
+  leafGustGain.connect(leafMaster.gain);
+
+  leafNoise.start();
+  leafAMNoise.start();
+
+  // ── Owl calls — sine with vibrato + second harmonic + breath noise ─────────
+  function playOwl() {
+    const t = audioCtx.currentTime;
+
+    // Vibrato LFO
+    const vibLFO = audioCtx.createOscillator();
+    vibLFO.frequency.value = 5.8;
+    const vibDepth = audioCtx.createGain();
+    vibDepth.gain.value = 9;
+
+    // Fundamental
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = 'sine';
+    // Second harmonic (gives the hooting its characteristic timbre)
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'sine';
+
+    vibLFO.connect(vibDepth);
+    vibDepth.connect(osc1.frequency);
+    vibDepth.connect(osc2.frequency);
+
+    const g1 = audioCtx.createGain();  g1.gain.value = 0;
+    const g2 = audioCtx.createGain();  g2.gain.value = 0;
+
+    // Breath/air noise through narrow bandpass
+    const breathSrc = audioCtx.createBufferSource();
+    breathSrc.buffer = noiseBuffer(2.5);
+    const breathBP = audioCtx.createBiquadFilter();
+    breathBP.type = 'bandpass';
+    breathBP.frequency.value = 290;
+    breathBP.Q.value = 3.5;
+    const breathGain = audioCtx.createGain(); breathGain.gain.value = 0;
+
+    breathSrc.connect(breathBP);
+    breathBP.connect(breathGain);
+    breathGain.connect(audioCtx.destination);
+
+    osc1.connect(g1); g1.connect(audioCtx.destination);
+    osc2.connect(g2); g2.connect(audioCtx.destination);
+
+    osc1.start(t); osc2.start(t); vibLFO.start(t); breathSrc.start(t);
+
+    // Hoot 1
+    const f1 = 285 + Math.random() * 20;
+    osc1.frequency.setValueAtTime(f1, t);
+    osc1.frequency.linearRampToValueAtTime(f1 * 0.82, t + 0.58);
+    osc2.frequency.setValueAtTime(f1 * 2.01, t);
+    osc2.frequency.linearRampToValueAtTime(f1 * 2.01 * 0.82, t + 0.58);
+
+    g1.gain.setValueAtTime(0, t);
+    g1.gain.linearRampToValueAtTime(0.13, t + 0.07);
+    g1.gain.setValueAtTime(0.13, t + 0.42);
+    g1.gain.linearRampToValueAtTime(0, t + 0.62);
+    g2.gain.setValueAtTime(0, t);
+    g2.gain.linearRampToValueAtTime(0.042, t + 0.07);
+    g2.gain.setValueAtTime(0.042, t + 0.42);
+    g2.gain.linearRampToValueAtTime(0, t + 0.62);
+    breathGain.gain.setValueAtTime(0, t);
+    breathGain.gain.linearRampToValueAtTime(0.018, t + 0.04);
+    breathGain.gain.linearRampToValueAtTime(0, t + 0.65);
+
+    // Hoot 2 (slight pitch variation)
+    const f2 = f1 + 12 + Math.random() * 15;
+    osc1.frequency.setValueAtTime(f2, t + 0.92);
+    osc1.frequency.linearRampToValueAtTime(f2 * 0.83, t + 1.52);
+    osc2.frequency.setValueAtTime(f2 * 2.01, t + 0.92);
+    osc2.frequency.linearRampToValueAtTime(f2 * 2.01 * 0.83, t + 1.52);
+
+    g1.gain.setValueAtTime(0, t + 0.92);
+    g1.gain.linearRampToValueAtTime(0.11, t + 0.99);
+    g1.gain.setValueAtTime(0.11, t + 1.35);
+    g1.gain.linearRampToValueAtTime(0, t + 1.56);
+    g2.gain.setValueAtTime(0, t + 0.92);
+    g2.gain.linearRampToValueAtTime(0.036, t + 0.99);
+    g2.gain.setValueAtTime(0.036, t + 1.35);
+    g2.gain.linearRampToValueAtTime(0, t + 1.56);
+    breathGain.gain.setValueAtTime(0, t + 0.92);
+    breathGain.gain.linearRampToValueAtTime(0.015, t + 0.96);
+    breathGain.gain.linearRampToValueAtTime(0, t + 1.58);
+
+    const stop = t + 1.8;
+    osc1.stop(stop); osc2.stop(stop); vibLFO.stop(stop);
+  }
+
+  function schedOwl() {
+    playOwl();
+    setTimeout(schedOwl, 9000 + Math.random() * 15000);
+  }
+  setTimeout(schedOwl, 1200);
+  setTimeout(schedOwl, 6500 + Math.random() * 3000);
+
+  // ── Thunder — crack + body boom + 3 staggered rumble echoes ─────────────
+  function thunder(vol) {
+    const t = audioCtx.currentTime;
+
+    // Crack: broadband transient — dies in ~45ms (real lightning strike)
+    const crackSrc = audioCtx.createBufferSource();
+    crackSrc.buffer = noiseBuffer(0.2);
+    const crackHP = audioCtx.createBiquadFilter();
+    crackHP.type = 'highpass'; crackHP.frequency.value = 200;
+    const crackEnv = audioCtx.createGain();
+    crackEnv.gain.setValueAtTime(vol * 1.9, t);
+    crackEnv.gain.exponentialRampToValueAtTime(vol * 0.06, t + 0.045);
+    crackEnv.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    crackSrc.connect(crackHP); crackHP.connect(crackEnv);
+    crackEnv.connect(audioCtx.destination);
+    crackSrc.start(t);
+
+    // Sub-bass punch: 55Hz sine burst — the physical chest-thud of a nearby strike
+    const punch = audioCtx.createOscillator();
+    punch.type = 'sine'; punch.frequency.value = 55;
+    const punchEnv = audioCtx.createGain();
+    punchEnv.gain.setValueAtTime(0, t);
+    punchEnv.gain.linearRampToValueAtTime(vol * 0.75, t + 0.005);
+    punchEnv.gain.exponentialRampToValueAtTime(0.001, t + 0.085);
+    punch.connect(punchEnv); punchEnv.connect(audioCtx.destination);
+    punch.start(t); punch.stop(t + 0.1);
+
+    // Body boom — two bandpass resonances characteristic of real thunder (100–350Hz)
+    // Low resonance: dominant boom
+    const b1 = audioCtx.createBufferSource(); b1.buffer = noiseBuffer(3.5);
+    const b1BP = audioCtx.createBiquadFilter();
+    b1BP.type = 'bandpass'; b1BP.frequency.value = 118; b1BP.Q.value = 1.3;
+    const b1Env = audioCtx.createGain();
+    b1Env.gain.setValueAtTime(0, t);
+    b1Env.gain.linearRampToValueAtTime(vol * 1.15, t + 0.018);
+    b1Env.gain.exponentialRampToValueAtTime(vol * 0.48, t + 0.26);
+    b1Env.gain.exponentialRampToValueAtTime(0.001, t + 3.0);
+    b1.connect(b1BP); b1BP.connect(b1Env); b1Env.connect(audioCtx.destination);
+    b1.start(t);
+
+    // Mid resonance: crackle texture layered over the boom
+    const b2 = audioCtx.createBufferSource(); b2.buffer = noiseBuffer(2.5);
+    const b2BP = audioCtx.createBiquadFilter();
+    b2BP.type = 'bandpass'; b2BP.frequency.value = 310; b2BP.Q.value = 0.9;
+    const b2Env = audioCtx.createGain();
+    b2Env.gain.setValueAtTime(0, t);
+    b2Env.gain.linearRampToValueAtTime(vol * 0.62, t + 0.022);
+    b2Env.gain.exponentialRampToValueAtTime(vol * 0.18, t + 0.32);
+    b2Env.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+    b2.connect(b2BP); b2BP.connect(b2Env); b2Env.connect(audioCtx.destination);
+    b2.start(t);
+
+    // Rolling rumble: 3 staggered low-pass noise sources at different delays,
+    // simulating the near/mid/far echo reflections off terrain and clouds.
+    // Each is quieter and lower-frequency than the last — this creates the
+    // characteristic rolling quality without any artificial swell.
+    function rumbleLayer(delay, lpFreq, peakVol, decayEnd) {
+      const src = audioCtx.createBufferSource();
+      src.buffer = noiseBuffer(decayEnd - delay + 0.5);
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = lpFreq; lp.Q.value = 0.5;
+      const env = audioCtx.createGain();
+      const s = t + delay;
+      env.gain.setValueAtTime(0, s);
+      env.gain.linearRampToValueAtTime(peakVol, s + 0.12);
+      env.gain.exponentialRampToValueAtTime(peakVol * 0.35, s + 0.9);
+      env.gain.exponentialRampToValueAtTime(0.001, t + decayEnd);
+      src.connect(lp); lp.connect(env); env.connect(audioCtx.destination);
+      src.start(s);
+    }
+    rumbleLayer(0.08, 82,  vol * 0.68, 5.2);  // near — arrives first, loudest
+    rumbleLayer(0.55, 54,  vol * 0.38, 6.0);  // mid  — 550ms later, quieter
+    rumbleLayer(1.10, 36,  vol * 0.20, 6.8);  // far  — 1.1s later, deepest, quietest
+  }
+
+  // Sync thunder to already-running CSS lightning animations.
+  // Calculate where each animation cycle is at button-click time using performance.now().
+  const pageAge = performance.now();
+  const p1=8000,  f1=2760, d1=1100;   // L1: 8s period, flash @34.5%, +1.1s sound delay
+  const p2=11000, f2=6655, d2=1300;   // L2: 11s period, flash @60.5%, +1.3s sound delay
+  const p3=14000, f3=2870, d3=900;    // L3: 14s period, flash @20.5%, +0.9s sound delay
+  setTimeout(() => { thunder(0.75); setInterval(() => thunder(0.75), p1); }, ((f1 - pageAge % p1) + p1) % p1 + d1);
+  setTimeout(() => { thunder(0.65); setInterval(() => thunder(0.65), p2); }, ((f2 - pageAge % p2) + p2) % p2 + d2);
+  setTimeout(() => { thunder(0.58); setInterval(() => thunder(0.58), p3); }, ((f3 - pageAge % p3) + p3) % p3 + d3);
+
+  // ── Wolf howl — 10% chance every 10s ──────────────────────────────────────
+  function playWolf() {
+    const t = audioCtx.currentTime;
+
+    // Vibrato (slower than owl — 3.2Hz gives wolf-like wavering quality)
+    const vibLFO   = audioCtx.createOscillator(); vibLFO.frequency.value = 3.2;
+    const vibDepth = audioCtx.createGain();        vibDepth.gain.value = 9;
+    vibLFO.connect(vibDepth);
+
+    // Fundamental — sine, ~150-170Hz rising to ~320Hz then falling
+    const osc  = audioCtx.createOscillator(); osc.type  = 'sine';
+    // Second harmonic — gives body and prevents it blending into the wind drone
+    const osc2 = audioCtx.createOscillator(); osc2.type = 'sine';
+    vibDepth.connect(osc.frequency);
+    vibDepth.connect(osc2.frequency);
+
+    // Breath noise — narrow bandpass around the fundamental, gives the howl
+    // texture and makes it audible even against the wind layer
+    const breathSrc = audioCtx.createBufferSource();
+    breathSrc.buffer = noiseBuffer(4.5);
+    const breathBP = audioCtx.createBiquadFilter();
+    breathBP.type = 'bandpass'; breathBP.frequency.value = 190; breathBP.Q.value = 2.8;
+    const breathGain = audioCtx.createGain(); breathGain.gain.value = 0;
+    breathSrc.connect(breathBP); breathBP.connect(breathGain);
+    breathGain.connect(audioCtx.destination);
+
+    const g1 = audioCtx.createGain(); g1.gain.value = 0;
+    const g2 = audioCtx.createGain(); g2.gain.value = 0;
+    osc.connect(g1);  g1.connect(audioCtx.destination);
+    osc2.connect(g2); g2.connect(audioCtx.destination);
+
+    // Howl shape: slow attack, rise to peak ~0.9s, hold, gradual fall
+    const base = 148 + Math.random() * 22;
+    osc.frequency.setValueAtTime(base, t);
+    osc.frequency.linearRampToValueAtTime(base * 2.15, t + 0.9);
+    osc.frequency.linearRampToValueAtTime(base * 1.55, t + 2.0);
+    osc.frequency.linearRampToValueAtTime(base * 1.1,  t + 3.4);
+    osc2.frequency.setValueAtTime(base * 2.02, t);
+    osc2.frequency.linearRampToValueAtTime(base * 2.02 * 2.15, t + 0.9);
+    osc2.frequency.linearRampToValueAtTime(base * 2.02 * 1.55, t + 2.0);
+    osc2.frequency.linearRampToValueAtTime(base * 2.02 * 1.1,  t + 3.4);
+
+    g1.gain.setValueAtTime(0, t);
+    g1.gain.linearRampToValueAtTime(0.22, t + 0.45);
+    g1.gain.setValueAtTime(0.22, t + 1.9);
+    g1.gain.linearRampToValueAtTime(0.11, t + 2.7);
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 4.0);
+    g2.gain.setValueAtTime(0, t);
+    g2.gain.linearRampToValueAtTime(0.07, t + 0.45);
+    g2.gain.setValueAtTime(0.07, t + 1.9);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 3.6);
+    breathGain.gain.setValueAtTime(0, t);
+    breathGain.gain.linearRampToValueAtTime(0.055, t + 0.35);
+    breathGain.gain.setValueAtTime(0.055, t + 1.8);
+    breathGain.gain.exponentialRampToValueAtTime(0.001, t + 3.8);
+
+    osc.start(t); osc2.start(t); vibLFO.start(t); breathSrc.start(t);
+    osc.stop(t + 4.2); osc2.stop(t + 4.2); vibLFO.stop(t + 4.2);
+  }
+  setInterval(() => { if (Math.random() < 0.1) playWolf(); }, 10000);
+});
+</script>
+</body>
+</html>
